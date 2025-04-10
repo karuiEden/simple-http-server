@@ -33,12 +33,12 @@ func main() {
 	vecStr := strings.Split(str, "\r\n")
 	path := strings.Split(vecStr[0], " ")[1]
 	if path == "/" || path == "/index.html" {
-		_, err := conn.Write([]byte("HTTP/1.1 200 OK\n\r"))
+		_, err := conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 		if err != nil {
 			return
 		}
 	} else {
-		_, err := conn.Write([]byte("HTTP/1.1 404 Not Found\n\r"))
+		_, err := conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		if err != nil {
 			return
 		}
