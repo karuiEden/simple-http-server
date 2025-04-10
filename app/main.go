@@ -3,8 +3,20 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 )
+
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	_, err := w.Write([]byte("HTTP/1.1 200 OK\n\r"))
+	if err != nil {
+		return
+	}
+}
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -23,10 +35,7 @@ func main() {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
-	_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	if err != nil {
-		return
-	}
+	http.HandleFunc("/", rootHandler)
 	err = conn.Close()
 	if err != nil {
 		return
