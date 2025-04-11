@@ -32,7 +32,12 @@ func main() {
 	str := string(buffer[:n])
 	vecStr := strings.Split(str, "\r\n")
 	path := strings.Split(vecStr[0], " ")[1]
-	userAgent := strings.Split(vecStr[2], " ")[2]
+	userAgent := ""
+	if strings.HasPrefix(vecStr[1], "User-Agent") {
+		userAgent = vecStr[1][len("User-Agent: "):]
+	} else {
+		userAgent = vecStr[2][len("User-Agent: "):]
+	}
 	if path == "/" {
 		_, err := conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 		if err != nil {
