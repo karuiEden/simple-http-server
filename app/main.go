@@ -50,7 +50,7 @@ func main() {
 		if err != nil {
 			return
 		}
-	} else if strings.HasPrefix(path, "/user-agent/") {
+	} else if strings.HasPrefix(path, "/user-agent") {
 		resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
 		_, err := conn.Write([]byte(resp))
 		if err != nil {
