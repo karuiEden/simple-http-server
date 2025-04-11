@@ -44,7 +44,7 @@ func main() {
 			return
 		}
 	} else if strings.HasPrefix(path, "/echo/") {
-		cont, _ := strings.CutPrefix(path, "/echo/")
+		cont := strings.TrimPrefix(path, "/echo/")
 		resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(cont), cont)
 		_, err := conn.Write([]byte(resp))
 		if err != nil {
