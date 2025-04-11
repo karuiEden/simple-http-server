@@ -32,6 +32,7 @@ func main() {
 	str := string(buffer[:n])
 	vecStr := strings.Split(str, "\r\n")
 	path := strings.Split(vecStr[0], " ")[1]
+	userAgent := strings.Split(vecStr[2], " ")[2]
 	if path == "/" {
 		_, err := conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 		if err != nil {
@@ -44,6 +45,13 @@ func main() {
 		if err != nil {
 			return
 		}
+	} else if strings.HasPrefix(path, "/user-agent/") {
+		resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)
+		_, err := conn.Write([]byte(resp))
+		if err != nil {
+			return
+		}
+
 	} else {
 		_, err := conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		if err != nil {
