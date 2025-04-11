@@ -8,12 +8,7 @@ import (
 )
 
 func Handler(conn net.Conn) {
-	defer func(conn net.Conn) {
-		err := conn.Close()
-		if err != nil {
-			fmt.Printf("Error closing connection: %s\n", err)
-		}
-	}(conn)
+	defer conn.Close()
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	if err != nil {
@@ -68,11 +63,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection: ", err.Error())
+			os.Exit(1)
+		}
+		go Handler(conn)
+
 	}
-	go Handler(conn)
 
 }
