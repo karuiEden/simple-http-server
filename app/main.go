@@ -25,15 +25,22 @@ func main() {
 		os.Exit(1)
 	}
 	buffer := make([]byte, 1024)
-	_, err = conn.Read(buffer)
+	n, err := conn.Read(buffer)
 	if err != nil {
 		return
 	}
-	str := string(buffer)
+	str := string(buffer[:n])
 	vecStr := strings.Split(str, "\r\n")
 	path := strings.Split(vecStr[0], " ")[1]
-	if path == "/" || path == "/index.html" {
+	if path == "/" {
 		_, err := conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+		if err != nil {
+			return
+		}
+	} else if strings.HasPrefix(path, "/echo/") {
+		cont, _ := strings.CutPrefix(path, "/echo/")
+		resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(cont), conn)
+		_, err := conn.Write([]byte(resp))
 		if err != nil {
 			return
 		}
