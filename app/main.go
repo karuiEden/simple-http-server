@@ -42,9 +42,9 @@ func newRequest(s string) Request {
 func rootHandler(r Request, conn net.Conn) error {
 	var resp string
 	if r.Path == "/" {
-		resp = r.Version + "200 OK" + "\r\n\r\n"
+		resp = r.Version + " 200 OK" + "\r\n\r\n"
 	} else {
-		resp = r.Version + "404 Not Found" + "\r\n\r\n"
+		resp = r.Version + " 404 Not Found" + "\r\n\r\n"
 	}
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
