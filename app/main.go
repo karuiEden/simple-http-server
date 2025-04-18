@@ -74,7 +74,7 @@ func echoHandler(r Request, conn net.Conn) error {
 
 func fileHandler(r Request, conn net.Conn) error {
 	if r.Method == "GET" {
-		filePath := os.Args[2] + strings.Split(r.Path, "/")[1]
+		filePath := os.Args[2] + strings.Split(r.Path, "/")[2]
 		cont, err := os.ReadFile(filePath)
 		var resp string
 		if err != nil {
