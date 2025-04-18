@@ -8,6 +8,12 @@ import (
 	"strings"
 )
 
+var mapHttp = map[int32]string{
+	200: "OK",
+	201: "Created",
+	404: "Not Found",
+}
+
 type Request struct {
 	Method        string
 	Path          string
@@ -17,6 +23,7 @@ type Request struct {
 	Accept        string
 	ContentType   string
 	ContentLength int64
+	Encoding      string
 	Body          string
 }
 
@@ -37,6 +44,9 @@ func newRequest(s string) Request {
 		if strings.HasPrefix(str, "Accept") {
 			req.Accept = strings.Split(str, " ")[1]
 		}
+		if strings.HasPrefix(str, "Accept-Encoding") {
+			req.Encoding = strings.Split(str, " ")[1]
+		}
 	}
 	if len(vecStr[2]) != 0 {
 		if strings.HasPrefix(vecStr[2], "Content-Type") {
@@ -50,13 +60,27 @@ func newRequest(s string) Request {
 	return req
 }
 
-func rootHandler(r Request, conn net.Conn) error {
-	var resp string
-	if r.Path == "/" {
-		resp = r.Version + " 200 OK" + "\r\n\r\n"
+func buildResponce(code int32, req Request, contentType string, cont string) string {
+	resp := fmt.Sprintf("%d %s\r\n", code, mapHttp[code])
+	if cont != "" {
+		if req.Encoding == "gzip" {
+			resp += fmt.Sprintf("Content-Encoding: gzip\r\n")
+		}
+		resp += fmt.Sprintf("Content-Type: %s\r\nContent-Length: %d\r\n\r\n%s", contentType, len(cont), cont)
 	} else {
-		resp = r.Version + " 404 Not Found" + "\r\n\r\n"
+		resp += "\r\n"
 	}
+	return resp
+}
+
+func rootHandler(r Request, conn net.Conn) error {
+	var code int32
+	if r.Path == "/" {
+		code = 200
+	} else {
+		code = 404
+	}
+	resp := buildResponce(code, r, "", "")
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
 		return err
@@ -65,7 +89,7 @@ func rootHandler(r Request, conn net.Conn) error {
 }
 
 func userAgentHandler(r Request, conn net.Conn) error {
-	resp := fmt.Sprintf("%s 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", r.Version, len(r.UserAgent), r.UserAgent)
+	resp := buildResponce(200, r, "text/plain", r.UserAgent)
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
 		return err
@@ -75,7 +99,7 @@ func userAgentHandler(r Request, conn net.Conn) error {
 
 func echoHandler(r Request, conn net.Conn) error {
 	cont, _ := strings.CutPrefix(r.Path, "/echo/")
-	resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(cont), cont)
+	resp := buildResponce(200, r, "text/plain", cont)
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
 		return err
@@ -89,16 +113,16 @@ func fileHandler(r Request, conn net.Conn) error {
 	if r.Method == "GET" {
 		cont, err := os.ReadFile(filePath)
 		if err != nil {
-			resp = fmt.Sprintf("%s 404 Not Found\r\n\r\n", r.Version)
+			resp = buildResponce(404, r, "", "")
 		} else {
-			resp = fmt.Sprintf("%s 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", r.Version, len(cont), cont)
+			resp = buildResponce(200, r, "application/octet-stream", string(cont))
 		}
 	} else if r.Method == "POST" {
 		err := os.WriteFile(filePath, []byte(r.Body), 0666)
 		if err != nil {
 			return err
 		}
-		resp = fmt.Sprintf("%s 201 Created\r\n\r\n", r.Version)
+		resp = buildResponce(201, r, "", "")
 	}
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
