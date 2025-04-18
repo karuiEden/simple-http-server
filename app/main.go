@@ -60,8 +60,8 @@ func newRequest(s string) Request {
 	return req
 }
 
-func buildResponce(code int32, req Request, contentType string, cont string) string {
-	resp := fmt.Sprintf("%d %s\r\n", code, mapHttp[code])
+func buildResponse(code int32, req Request, contentType string, cont string) string {
+	resp := fmt.Sprintf("%s %d %s\r\n", req.Version, code, mapHttp[code])
 	if cont != "" {
 		if req.Encoding == "gzip" {
 			resp += fmt.Sprintf("Content-Encoding: gzip\r\n")
@@ -80,7 +80,7 @@ func rootHandler(r Request, conn net.Conn) error {
 	} else {
 		code = 404
 	}
-	resp := buildResponce(code, r, "", "")
+	resp := buildResponse(code, r, "", "")
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func rootHandler(r Request, conn net.Conn) error {
 }
 
 func userAgentHandler(r Request, conn net.Conn) error {
-	resp := buildResponce(200, r, "text/plain", r.UserAgent)
+	resp := buildResponse(200, r, "text/plain", r.UserAgent)
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func userAgentHandler(r Request, conn net.Conn) error {
 
 func echoHandler(r Request, conn net.Conn) error {
 	cont, _ := strings.CutPrefix(r.Path, "/echo/")
-	resp := buildResponce(200, r, "text/plain", cont)
+	resp := buildResponse(200, r, "text/plain", cont)
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
 		return err
@@ -113,16 +113,16 @@ func fileHandler(r Request, conn net.Conn) error {
 	if r.Method == "GET" {
 		cont, err := os.ReadFile(filePath)
 		if err != nil {
-			resp = buildResponce(404, r, "", "")
+			resp = buildResponse(404, r, "", "")
 		} else {
-			resp = buildResponce(200, r, "application/octet-stream", string(cont))
+			resp = buildResponse(200, r, "application/octet-stream", string(cont))
 		}
 	} else if r.Method == "POST" {
 		err := os.WriteFile(filePath, []byte(r.Body), 0666)
 		if err != nil {
 			return err
 		}
-		resp = buildResponce(201, r, "", "")
+		resp = buildResponse(201, r, "", "")
 	}
 	_, err := conn.Write([]byte(resp))
 	if err != nil {
