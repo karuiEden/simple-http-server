@@ -26,6 +26,7 @@ type Request struct {
 	UserAgent     string
 	Accept        string
 	ContentType   string
+	Close         bool
 	ContentLength int64
 	Encoding      []string
 	Body          string
@@ -51,6 +52,9 @@ func newRequest(s string) Request {
 		if strings.HasPrefix(str, "Accept-Encoding") {
 			parsedEnc, _ := strings.CutPrefix(str, "Accept-Encoding: ")
 			req.Encoding = strings.Split(parsedEnc, ", ")
+		}
+		if str == "Connection: close" {
+			req.Close = true
 		}
 	}
 	if len(vecStr[2]) != 0 {
@@ -150,34 +154,47 @@ func fileHandler(r Request, conn net.Conn) error {
 	return nil
 }
 
-func Handler(conn net.Conn) {
-	defer conn.Close()
+func HandlerReq(conn net.Conn) (bool, error) {
 	buffer := make([]byte, 1024)
 	n, err := conn.Read(buffer)
 	if err != nil {
-		return
+		return true, err
 	}
 	str := string(buffer[:n])
 	req := newRequest(str)
 	if strings.HasPrefix(req.Path, "/echo/") {
 		err := echoHandler(req, conn)
 		if err != nil {
-			return
+			return true, err
 		}
 	} else if strings.HasPrefix(req.Path, "/user-agent") {
 		err := userAgentHandler(req, conn)
 		if err != nil {
-			return
+			return true, err
 		}
 	} else if strings.HasPrefix(req.Path, "/files") && len(os.Args) > 2 && os.Args[1] == "--directory" {
 		err := fileHandler(req, conn)
 		if err != nil {
-			return
+			return true, err
 		}
 	} else {
 		err := rootHandler(req, conn)
 		if err != nil {
-			return
+			return true, err
+		}
+	}
+	return req.Close, nil
+}
+
+func Handler(conn net.Conn) {
+	defer conn.Close()
+	for {
+		connClose, err := HandlerReq(conn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if connClose {
+			break
 		}
 	}
 }
