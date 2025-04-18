@@ -4,17 +4,20 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type Request struct {
-	Method    string
-	Path      string
-	Version   string
-	Host      string
-	UserAgent string
-	Accept    string
-	Body      string
+	Method        string
+	Path          string
+	Version       string
+	Host          string
+	UserAgent     string
+	Accept        string
+	ContentType   string
+	ContentLength int64
+	Body          string
 }
 
 func newRequest(s string) Request {
@@ -24,7 +27,7 @@ func newRequest(s string) Request {
 	req.Method = requestLine[0]
 	req.Path = requestLine[1]
 	req.Version = requestLine[2]
-	for _, str := range vecStr {
+	for _, str := range vecStr[1:] {
 		if strings.HasPrefix(str, "Host") {
 			req.Host = strings.Split(str, " ")[1]
 		}
@@ -33,6 +36,14 @@ func newRequest(s string) Request {
 		}
 		if strings.HasPrefix(str, "Accept") {
 			req.Accept = strings.Split(str, " ")[1]
+		}
+	}
+	if len(vecStr[2]) != 0 {
+		if strings.HasPrefix(vecStr[2], "Content-Type") {
+			req.ContentType = strings.Split(vecStr[2], " ")[1]
+		}
+		if strings.HasPrefix(vecStr[2], "Content-Length") {
+			req.ContentLength, _ = strconv.ParseInt(strings.Split(vecStr[2], " ")[1], 10, 64)
 		}
 	}
 	req.Body = vecStr[len(vecStr)-1]
@@ -73,19 +84,25 @@ func echoHandler(r Request, conn net.Conn) error {
 }
 
 func fileHandler(r Request, conn net.Conn) error {
+	filePath := os.Args[2] + strings.Split(r.Path, "/")[2]
+	var resp string
 	if r.Method == "GET" {
-		filePath := os.Args[2] + strings.Split(r.Path, "/")[2]
 		cont, err := os.ReadFile(filePath)
-		var resp string
 		if err != nil {
 			resp = fmt.Sprintf("%s 404 Not Found\r\n\r\n", r.Version)
 		} else {
 			resp = fmt.Sprintf("%s 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", r.Version, len(cont), cont)
 		}
-		_, err = conn.Write([]byte(resp))
+	} else if r.Method == "POST" {
+		err := os.WriteFile(filePath, []byte(r.Body), 0666)
 		if err != nil {
 			return err
 		}
+		resp = fmt.Sprintf("%s 201 Created\r\n\r\n", r.Version)
+	}
+	_, err := conn.Write([]byte(resp))
+	if err != nil {
+		return err
 	}
 	return nil
 }
