@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -23,7 +24,7 @@ type Request struct {
 	Accept        string
 	ContentType   string
 	ContentLength int64
-	Encoding      string
+	Encoding      []string
 	Body          string
 }
 
@@ -45,7 +46,8 @@ func newRequest(s string) Request {
 			req.Accept = strings.Split(str, " ")[1]
 		}
 		if strings.HasPrefix(str, "Accept-Encoding") {
-			req.Encoding = strings.Split(str, " ")[1]
+			parsedEnc, _ := strings.CutPrefix(str, "Accept-Encoding: ")
+			req.Encoding = strings.Split(parsedEnc, ", ")
 		}
 	}
 	if len(vecStr[2]) != 0 {
@@ -63,7 +65,7 @@ func newRequest(s string) Request {
 func buildResponse(code int32, req Request, contentType string, cont string) string {
 	resp := fmt.Sprintf("%s %d %s\r\n", req.Version, code, mapHttp[code])
 	if cont != "" {
-		if req.Encoding == "gzip" {
+		if slices.Contains(req.Encoding, "gzip") {
 			resp += fmt.Sprintf("Content-Encoding: gzip\r\n")
 		}
 		resp += fmt.Sprintf("Content-Type: %s\r\nContent-Length: %d\r\n\r\n%s", contentType, len(cont), cont)
