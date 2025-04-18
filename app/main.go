@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"slices"
@@ -67,8 +70,22 @@ func buildResponse(code int32, req Request, contentType string, cont string) str
 	if cont != "" {
 		if slices.Contains(req.Encoding, "gzip") {
 			resp += fmt.Sprintf("Content-Encoding: gzip\r\n")
+			var compressed bytes.Buffer
+			gz := gzip.NewWriter(&compressed)
+			_, err := gz.Write([]byte(cont))
+			if err != nil {
+				log.Fatal(err)
+				return resp
+			}
+			err = gz.Close()
+			if err != nil {
+				log.Fatal(err)
+				return resp
+			}
+			resp += fmt.Sprintf("Content-Type: %s\r\nContent-Length: %d\r\n\r\n%s", contentType, len(compressed.Bytes()), string(compressed.Bytes()))
+		} else {
+			resp += fmt.Sprintf("Content-Type: %s\r\nContent-Length: %d\r\n\r\n%s", contentType, len(cont), cont)
 		}
-		resp += fmt.Sprintf("Content-Type: %s\r\nContent-Length: %d\r\n\r\n%s", contentType, len(cont), cont)
 	} else {
 		resp += "\r\n"
 	}
