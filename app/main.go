@@ -76,10 +76,12 @@ func fileHandler(r Request, conn net.Conn) error {
 	if r.Method == "GET" {
 		filePath := os.Args[2] + strings.Split(r.Path, "/")[1]
 		cont, err := os.ReadFile(filePath)
+		var resp string
 		if err != nil {
-			return err
+			resp = fmt.Sprintf("%s 404 Not Found\r\n\r\n", r.Version)
+		} else {
+			resp = fmt.Sprintf("%s 200 OK\r\nContent-Type: octet-stream\r\nContent-Length: %d\r\n\r\n%s", r.Version, len(cont), cont)
 		}
-		resp := fmt.Sprintf("%s 200 OK\r\nContent-Type: octet-stream\r\nContent-Length: %d\r\n\r\n%s", r.Version, len(cont), cont)
 		_, err = conn.Write([]byte(resp))
 		if err != nil {
 			return err
